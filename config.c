@@ -12,6 +12,7 @@
 void load(char *filename, int *width, int *height);
 void error(lua_State *L, const char *fmt, ...);
 int getfield(lua_State *L,int index, char *key);
+void setfield(lua_State *L, int index, char *key, int value);
 
 void error(lua_State *L, const char *fmt, ...)
 {
@@ -44,6 +45,13 @@ int getfield(lua_State *L,int index, char *key)
     lua_pop(L, 1); /* remove number */
 
     return result;
+}
+
+void setfield(lua_State *L, int index, char *key, int value)
+{
+    lua_pushstring(L, key);
+    lua_pushnumber(L, (double)value);
+    lua_settable(L, index > 0 ? index : (index - 2));
 }
 
 void load(char *filename, int *width, int *height)
