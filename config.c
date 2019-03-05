@@ -4,6 +4,7 @@
 #include <lualib.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #define MAX_COLOR 255
 
@@ -26,6 +27,18 @@ int getfield(lua_State *L,int index, char *key);
 void setfield(lua_State *L, int index, char *key, int value);
 void setcolor(lua_State *L, struct ColorTable *ct);
 double f (lua_State *L, double x, double y);
+void va_call(lua_State *L,const char *func, const char *sig, ...);
+void test_va(lua_State *L,const char *fmt, ...);
+
+void test_va(lua_State *L,const char *fmt, ...)
+{
+    va_list arg;
+    va_start(arg, fmt);
+
+    printf("test_va arg%d\n", va_arg(arg, int));
+
+    va_end(arg);
+}
 
 void error(lua_State *L, const char *fmt, ...)
 {
@@ -136,6 +149,12 @@ void load(char *filename, int *width, int *height)
 
     printf("function f return:%f\n", f(L, 2, 2));
 
+    // 缺点是，参数的类型必须严格 比如d 参数不能位2，必须为2.0
+    va_call(L, "f", "dd>i", 2.0, 2.0, &i);
+
+    printf("function f return:%d\n", i);
+    
+    //test_va(L, "dd", 2, 2);
     lua_close(L);
 
 }
@@ -162,7 +181,24 @@ double f (lua_State *L, double x, double y)
         error(L, "error run function f:%s\n", lua_tostring(L, -1));
     }
 
-    // 把结果压入栈
+    // 对于错误处理函数
+    // 使用 lua_pcall 的最后一个参数来指定错误 处理函数，0 代表没有错误处理函数，
+    // 也就是说最终的错误信息就是原始的错误信息。 否则，那个参数应该是一个错误函数被加载的时候在栈中的索引，
+    // 注意，在这种情况下， 错误处理函数必须要在被调用函数和其参数入栈之前入栈。
+
+    // 对于错误 pcall 返回值
+    // 对于一般错误，lua_pcall 返回错误代码 LUA_ERRRUN。
+    // 有两种特殊情况，会返回 特殊的错误代码，因为他们从来不会调用错误处理函数
+
+
+    // pcall压栈返回值
+    // 如果函数返回多个结果，第一个结果被第一个入栈，因此如果 有 n 个返回结果，
+    // 第一个返回结果在栈中的位置为-n，最后一个返回结果在栈中的位置 为-1。
+    // 第一种情况是，内存分配错误， 对于这种错误，lua_pcall 总是返回 LUA_ERRMEM。
+    // 第二种情况是，当 Lua 正在运行错误处理函数时发生错误，这种情况下，
+    // 再次调用错误处理函数没有意义，所以 lua_pcall立即返回错误代码 LUA_ERRERR。
+
+
     if (! lua_isnumber(L, -1))
     {
         error(L, "fucntion 'f' must return number\n");
@@ -172,6 +208,99 @@ double f (lua_State *L, double x, double y)
     lua_pop(L, -1); // 把值出栈
 
     return z;
+}
+
+void va_call(lua_State *L, const char *func, const char *sig, ...)
+{
+    va_list vl;
+    va_start(vl, sig);
+
+    int narg = 0, nres = 0;
+    int isBreak = 0;
+
+    //printf("sdd %f\n", va_arg(vl, double));
+    //exit(0);
+
+    // 加载函数
+    lua_getglobal(L, func);
+
+
+    while (*sig)
+    {
+        switch (*sig++)
+        {
+            case 'd':
+                lua_pushnumber(L, va_arg(vl, double));
+                break;
+            case 'i':
+                lua_pushnumber(L, va_arg(vl, int));
+                break;
+            case 's':
+                lua_pushstring(L, va_arg(vl, char *));
+                break;
+            case '>':
+                isBreak = 1;
+                break;
+            default:
+                error(L, "invalid sig type\n");
+                break;
+        }
+
+        if (isBreak)
+        {
+            break;
+        }
+
+        ++narg;
+
+        // 检测栈空间是否足够
+        luaL_checkstack(L, 1, "too many arguments\n");
+    }
+
+    // 运行函数
+    nres = strlen(sig);
+    
+    if (lua_pcall(L, narg, nres, 0))
+    {
+        error(L, "run function error:%s\n", lua_tostring(L, -1));
+    }
+
+    // 从栈中获取结果给指针参数
+    nres = - nres;
+    //error(L, "%d, %f\n", nres, lua_tonumber(L, nres));
+    while(*sig)
+    {
+        switch (*sig++)
+        {
+            case 'd':
+                if (! lua_isnumber(L, nres))
+                {
+                    error(L, "the %d return value must be number\n", nres);
+                }
+                *va_arg(vl, double *) = lua_tonumber(L, nres);
+                break;
+            case 'i':
+                if (! lua_isnumber(L, nres))
+                {
+                    error(L, "the %d return value must be number\n", nres);
+                }
+                *va_arg(vl, int *) = (int)lua_tonumber(L, nres);
+                break;
+            case 's':
+                if (! lua_isstring(L, nres))
+                {
+                    error(L, "the %d return value must be string\n", nres);
+                }
+                *va_arg(vl, const char **) = lua_tostring(L, nres);
+                break;
+            default:
+                error(L, "invalid option (%c)", *(sig - 1));
+                break;
+        }
+        ++nres;
+    }
+    
+    va_end(vl);
 }
 
 int main(void)

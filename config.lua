@@ -7,5 +7,7 @@ BLUE = {r=0, g=0, b=1}
 background = "GREEN"
 
 function f (x, y)
+    print('hhh', x, y)
+    --return 9;
     return (x^2 * math.sin(y))/(1 - x)
 end
