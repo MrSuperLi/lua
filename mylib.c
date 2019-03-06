@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <string.h>
 
-// gcc mylib.c -fPIC -llua -shared -o source.so
+// gcc mylib.c -llua -shared -o source.so
 
 // https://zhidao.baidu.com/question/551971637903019772.html
 

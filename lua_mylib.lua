@@ -49,7 +49,7 @@ mylib = f()
 
 print('f()', mylib)
 
-print('dir', mylib.dir);
+print('mylib.dir', mylib.dir);
 
 
 var_export(mylib.dir('./'))
