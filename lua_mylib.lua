@@ -53,3 +53,8 @@ print('mylib.dir', mylib.dir);
 
 
 var_export(mylib.dir('./'))
+
+var_export(mylib.map({1,2,3,4}, function (v) return 2 * v; end));
+
+
+print(mylib.upper('123abcd'))

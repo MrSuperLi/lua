@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
+#include <ctype.h>
 
 // gcc mylib.c -llua -shared -o source.so
 
@@ -37,9 +38,55 @@ static int l_dir(lua_State *L)
     return 1; /* table is already on top */
 }
 
+static int l_map(lua_State *L)
+{
+    int i, n;
+
+    luaL_checktype(L, 1, LUA_TTABLE);
+
+    luaL_checktype(L, 2, LUA_TFUNCTION);
+
+    n = luaL_len(L, 1);
+
+    lua_newtable(L);
+
+    for(i = 1; i <= n; ++i)
+    {
+        lua_pushvalue(L, 2); // push function
+        lua_rawgeti(L, 1, i); // push t[i]
+        lua_call(L, 1, 1);  // call function
+        lua_rawseti(L, 3, i); // set array
+    }
+
+    return 1;
+}
+
+static int l_upper(lua_State *L)
+{
+    size_t l;
+    size_t i;
+
+    luaL_Buffer b;
+
+    const char *s = luaL_checklstring(L, 1, &l);
+
+    luaL_buffinit(L, &b);
+
+    for(size_t i = 0; i < l; ++i)
+    {
+        luaL_addchar(&b, toupper((unsigned char )(s[i])));
+    }
+    
+    luaL_pushresult(&b);
+
+    return 1;
+}
+
 // 捆绑库里面的函数
 static const struct luaL_Reg mylib[] = {
     {"dir", l_dir},
+    {"map", l_map},
+    {"upper", l_upper},
     {NULL, NULL}
 };
 
@@ -51,3 +98,16 @@ int luaopen_mylib(lua_State *L)
     return 1;
 }
 
+// void lua_rawgeti (lua_State *L, int index, int key);
+// void lua_rawseti (lua_State *L, int index, int key);
+
+//  lua_rawgeti(L,t,key) 等价于 lua_pushnumber(L, key); lua_rawget(L, t);
+//  lua_rawseti(L, t, key) 等价于 lua_pushnumber(L, key);lua_insert(L, -2);lua_rawset(L, t);
+
+
+// void luaL_buffinit (lua_State *L, luaL_Buffer *B);
+// 初始化之后，buffer 保留了一份状态 L 的拷贝，因此当我 们调用其他操作 buffer 的函数的时候不需要传递 L
+// void luaL_addchar (luaL_Buffer *B, char c);
+// void luaL_addlstring (luaL_Buffer *B, const char *s, size_t l);
+// void luaL_addstring (luaL_Buffer *B, const char *s);
+// void luaL_pushresult (luaL_Buffer *B);
