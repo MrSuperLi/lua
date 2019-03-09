@@ -6,6 +6,20 @@
 #include <string.h>
 #include <ctype.h>
 
+static int counter(lua_State *l);
+
+static int counter(lua_State *L)
+{
+    int number = lua_tonumber(L, lua_upvalueindex(1));
+
+    lua_pushnumber(L, ++number);
+    lua_pushvalue(L, -1); // 复制一份，用于函数返回值
+
+    lua_replace(L, lua_upvalueindex(1)); // 把栈顶的值替换到指定的index
+
+    return 1;
+}
+
 // gcc mylib.c -llua -shared -o source.so
 
 // https://zhidao.baidu.com/question/551971637903019772.html
@@ -82,11 +96,20 @@ static int l_upper(lua_State *L)
     return 1;
 }
 
+// 生成lua闭包
+static int l_newCounter(lua_State *L)
+{
+    lua_pushnumber(L, 0); // 把上值先压入栈
+    lua_pushcclosure(L, &counter, 1); // 把闭包压入栈
+    return 1;
+}
+
 // 捆绑库里面的函数
 static const struct luaL_Reg mylib[] = {
     {"dir", l_dir},
     {"map", l_map},
     {"upper", l_upper},
+    {"newCounter", l_newCounter},
     {NULL, NULL}
 };
 

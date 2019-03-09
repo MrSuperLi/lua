@@ -58,3 +58,7 @@ var_export(mylib.map({1,2,3,4}, function (v) return 2 * v; end));
 
 
 print(mylib.upper('123abcd'))
+
+-- 生成计数器
+counter = mylib.newCounter();
+print('计数器:', counter(), counter(), counter());
