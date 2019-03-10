@@ -62,3 +62,16 @@ print(mylib.upper('123abcd'))
 -- 生成计数器
 counter = mylib.newCounter();
 print('计数器:', counter(), counter(), counter());
+
+local array =  package.loadlib("./array.so", "luaopen_array")
+
+print('array', array);
+
+array = array();
+
+print('array', array);
+
+numArray = array.new(5);
+print('numArray', numArray);
+array.set(numArray, 1, 10)
+print('getArray', array.get(numArray, 1));
