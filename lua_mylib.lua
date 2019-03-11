@@ -75,3 +75,14 @@ numArray = array.new(5);
 print('numArray', numArray);
 array.set(numArray, 1, 10)
 print('getArray', array.get(numArray, 1));
+print('size:', numArray:size());
+
+local array1 =  package.loadlib("./array1.so", "luaopen_array")
+
+array1 = array1();
+
+a = array1.new(5);
+
+a[1] = 12;
+print(a[1]);
+print('array.size(a)', array.size(a));

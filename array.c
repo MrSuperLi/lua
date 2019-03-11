@@ -2,13 +2,6 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
-// gcc userdata.c -llua -shared -o array.so
-// 有一个很大的安全漏洞:
-// array.set(io.stdin, 1, 0)。io.stdin 中的值是一个带有指向流(FILE*)的指针的 userdatum
-// 为了区分数组和其他的userdata，我们单独为数组创建了一个metatable
-// （记住userdata也可以拥有 metatables）
-// 在 Lua 中一般习惯于在 registry 中注册新的 C 类型，使用类型名作为索引，metatable 作为值。
-
 typedef struct NumArray
 {
     int size;
@@ -90,32 +83,31 @@ static const struct luaL_Reg array[] = {
     {NULL, NULL}
 };
 
-static const struct luaL_Reg array_m[] = {
-    {"set", setarray},
-    {"get", getarray},
-    {"size", getsize},
-    {"__tostring", array2string},
-    {NULL, NULL}
-};
-
 
 
 int luaopen_array(lua_State *L)
 {
     luaL_newmetatable(L, "LuaBook.array");
-    
-    /* start  访问面向对象的数据*/
-    // a = array.new(1000);print(a:size());
-    // 给metatable 设置__index
-    lua_pushstring(L, "__index"); // key
-    lua_pushvalue(L, -2); // copy 的value to the top
-    lua_settable(L, -3); // 设置 __index 是自己
-
-    luaL_setfuncs(L, array_m, 0); // 给 metatable 设置 function
-    /* end  访问面向对象的数据 */
 
     lua_newtable(L);
     luaL_setfuncs(L, array, 0);
+
+    // 设置 __index
+    lua_pushstring(L, "__index");
+    lua_pushstring(L, "get");
+
+    lua_gettable(L, 2);
+    lua_settable(L, 1);
+
+    // 设置 __index
+    lua_pushstring(L, "__newindex");
+    lua_pushstring(L, "set");
+
+    lua_gettable(L, 2);
+    lua_settable(L, 1);
+
+
+    // 设置 __newindex
 
     return 1;
 }
