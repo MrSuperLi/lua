@@ -75,6 +75,13 @@ static int getsize(lua_State *L)
     return 1;
 }
 
+int array2string(lua_State *L)
+{
+    NumArray *a = checkarray(L);
+    lua_pushfstring(L, "array(%d)", a->size);
+    return 1;
+} 
+
 static const struct luaL_Reg array[] = {
     {"new", newarray},
     {"set", setarray},
@@ -87,6 +94,7 @@ static const struct luaL_Reg array_m[] = {
     {"set", setarray},
     {"get", getarray},
     {"size", getsize},
+    {"__tostring", array2string},
     {NULL, NULL}
 };
 
